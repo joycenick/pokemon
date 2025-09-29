@@ -1,0 +1,56 @@
+package com.example.pokmon.model
+
+data class Pokemon(
+    val id: Int,
+    val name: String,
+    val types: List<TypeSlot>,
+    val sprites: Sprites,
+    val stats: List<StatSlot>,
+    val moves: List<MoveSlot>,
+    val species: PokemonSpecies // 🚨 CORREÇÃO: Adicionamos o campo 'species' aqui!
+) {
+    val type1: String?
+        get() = types.firstOrNull()?.type?.name?.uppercase()
+
+    val spritesGif: String?
+        get() = sprites.versions?.generationV?.blackWhite?.animated?.front_default
+
+    val spritesFront: String?
+        get() = sprites.front_default
+
+    val hp: Int
+        get() = stats.find { it.stat.name == "hp" }?.base_stat ?: 0
+    val attack: Int
+        get() = stats.find { it.stat.name == "attack" }?.base_stat ?: 0
+    val defense: Int
+        get() = stats.find { it.stat.name == "defense" }?.base_stat ?: 0
+    val specialAttack: Int
+        get() = stats.find { it.stat.name == "special-attack" }?.base_stat ?: 0
+    val specialDefense: Int
+        get() = stats.find { it.stat.name == "special-defense" }?.base_stat ?: 0
+    val speed: Int
+        get() = stats.find { it.stat.name == "speed" }?.base_stat ?: 0
+}
+
+data class TypeSlot(val slot: Int, val type: Type)
+data class Type(val name: String)
+data class Sprites(
+    val front_default: String?,
+    val versions: Versions?
+)
+data class Versions(val generationV: GenerationV?)
+data class GenerationV(val blackWhite: BlackWhite?)
+data class BlackWhite(val animated: Animated?)
+data class Animated(val front_default: String?)
+
+data class StatSlot(val base_stat: Int, val stat: Stat)
+data class Stat(val name: String)
+
+data class MoveSlot(val move: Move)
+data class Move(val name: String)
+
+// Esta classe já estava correta, mas agora está sendo usada acima.
+data class PokemonSpecies(
+    val name: String,
+    val url: String
+)
