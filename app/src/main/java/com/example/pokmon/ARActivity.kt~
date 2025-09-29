@@ -9,7 +9,6 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -19,60 +18,65 @@ import java.util.concurrent.Executors
 class ARActivity : AppCompatActivity() {
 
     private lateinit var cameraPreview: PreviewView
-    private lateinit var arLayout: ConstraintLayout
-    private lateinit var btnAddPokemon: FloatingActionButton
     private lateinit var cameraExecutor: ExecutorService
+    private lateinit var btnAddPokemon: FloatingActionButton
 
-    private var dX = 0f
-    private var dY = 0f
-
-    private val pokemonsAtivos = mutableListOf<ImageView>()
+    // Lista para armazenar os ImageViews dos Pokémon adicionados
+    private val pokemonsRA = mutableListOf<ImageView>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_aractivity)
 
         cameraPreview = findViewById(R.id.cameraPreview)
-        arLayout = findViewById(R.id.arLayout)
         btnAddPokemon = findViewById(R.id.btnAddPokemon)
 
         startCamera()
 
-        // Adicionar o Pokémon inicial (passado pelo Intent)
+        // Adiciona o primeiro Pokémon que veio do Detalhe
         val pokemonId = intent.getIntExtra("pokemonId", 1)
         addPokemon(pokemonId)
 
-        // Ao clicar no botão, abre a escolha de novos Pokémon
+        // Botão para adicionar mais Pokémon
         btnAddPokemon.setOnClickListener {
-            // Aqui você pode abrir um diálogo ou Activity para escolher
-            // Por exemplo, vamos adicionar um Pokémon aleatório para teste
-            val novoPokemonId = (1..151).random()
-            addPokemon(novoPokemonId)
+            // Aqui você pode escolher outro Pokémon ou repetir o mesmo
+            addPokemon(pokemonId)
         }
     }
 
     private fun addPokemon(pokemonId: Int) {
-        val imgPokemon = ImageView(this)
-        imgPokemon.layoutParams = ConstraintLayout.LayoutParams(150, 150)
-        imgPokemon.x = 100f // posição inicial X
-        imgPokemon.y = 100f // posição inicial Y
-        imgPokemon.scaleType = ImageView.ScaleType.CENTER_INSIDE
+        val imgPokemon = ImageView(this).apply {
+            layoutParams = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(150, 150)
+            // Centraliza o Pokémon na tela
+            x = (cameraPreview.width / 2).toFloat()
+            y = (cameraPreview.height / 2).toFloat()
+        }
 
-        val scaleGestureDetector = ScaleGestureDetector(this, object :
-            ScaleGestureDetector.SimpleOnScaleGestureListener() {
-            private var scaleFactor = 1.0f
+        // Carrega o GIF
+        val gifUrl =
+            "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${pokemonId}.gif"
+        Glide.with(this)
+            .asGif()
+            .load(gifUrl)
+            .into(imgPokemon)
+
+        // Permite arrastar e redimensionar
+        val scaleDetector = ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            private var scaleFactor = 1f
             override fun onScale(detector: ScaleGestureDetector): Boolean {
                 scaleFactor *= detector.scaleFactor
-                scaleFactor = scaleFactor.coerceIn(0.5f, 15.0f)
+                scaleFactor = scaleFactor.coerceIn(0.5f, 15f)
                 imgPokemon.scaleX = scaleFactor
                 imgPokemon.scaleY = scaleFactor
                 return true
             }
         })
 
-        imgPokemon.setOnTouchListener { view, event ->
-            scaleGestureDetector.onTouchEvent(event)
+        var dX = 0f
+        var dY = 0f
 
+        imgPokemon.setOnTouchListener { view, event ->
+            scaleDetector.onTouchEvent(event)
             if (event.pointerCount == 1) {
                 when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
@@ -88,15 +92,10 @@ class ARActivity : AppCompatActivity() {
             true
         }
 
-        val gifUrl =
-            "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/$pokemonId.gif"
-        Glide.with(this)
-            .asGif()
-            .load(gifUrl)
-            .into(imgPokemon)
-
-        pokemonsAtivos.add(imgPokemon)
+        // Adiciona à tela
+        val arLayout = findViewById<androidx.constraintlayout.widget.ConstraintLayout>(R.id.arLayout)
         arLayout.addView(imgPokemon)
+        pokemonsRA.add(imgPokemon)
     }
 
     private fun startCamera() {
