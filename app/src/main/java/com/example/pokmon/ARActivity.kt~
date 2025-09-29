@@ -1,0 +1,104 @@
+package com.example.pokmon
+
+import android.os.Bundle
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
+import android.widget.ImageView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.core.content.ContextCompat
+import com.bumptech.glide.Glide
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+
+class ARActivity : AppCompatActivity() {
+
+    private lateinit var cameraPreview: PreviewView
+    private lateinit var imgPokemonRA: ImageView
+    private lateinit var cameraExecutor: ExecutorService
+    private lateinit var scaleGestureDetector: ScaleGestureDetector
+
+    private var scaleFactor = 1.0f
+    private var dX = 0f
+    private var dY = 0f
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_aractivity)
+
+        cameraPreview = findViewById(R.id.cameraPreview)
+        imgPokemonRA = findViewById(R.id.imgPokemonRA)
+
+        val pokemonId = intent.getIntExtra("pokemonId", 1)
+
+        val gifUrl =
+            "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${pokemonId}.gif"
+
+        Glide.with(this)
+            .asGif()
+            .load(gifUrl)
+            .into(imgPokemonRA)
+
+        // Configura o detector de escala
+        scaleGestureDetector = ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                scaleFactor *= detector.scaleFactor
+                scaleFactor = scaleFactor.coerceIn(0.5f, 3.0f) // Limita o tamanho
+                imgPokemonRA.scaleX = scaleFactor
+                imgPokemonRA.scaleY = scaleFactor
+                return true
+            }
+        })
+
+        // Permite arrastar o GIF
+        imgPokemonRA.setOnTouchListener { view, event ->
+            scaleGestureDetector.onTouchEvent(event) // Detecta pinch primeiro
+
+            if (event.pointerCount == 1) { // Só arrasta com 1 dedo
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        dX = view.x - event.rawX
+                        dY = view.y - event.rawY
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        view.x = event.rawX + dX
+                        view.y = event.rawY + dY
+                    }
+                }
+            }
+            true
+        }
+
+        startCamera()
+    }
+
+    private fun startCamera() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+        cameraExecutor = Executors.newSingleThreadExecutor()
+
+        cameraProviderFuture.addListener({
+            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+
+            val preview = Preview.Builder()
+                .build()
+                .also { it.setSurfaceProvider(cameraPreview.surfaceProvider) }
+
+            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+            try {
+                cameraProvider.unbindAll()
+                cameraProvider.bindToLifecycle(this, cameraSelector, preview)
+            } catch (exc: Exception) {
+                exc.printStackTrace()
+            }
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        cameraExecutor.shutdown()
+    }
+}

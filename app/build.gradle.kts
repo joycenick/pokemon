@@ -39,29 +39,30 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 
-    // Retrofit -> Biblioteca de consumo de API
+    // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
-
-// Gson -> Conversão de JSON
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
 
-// Glide -> Carregamento de imagens
+    // Glide
     implementation("com.github.bumptech.glide:glide:4.16.0")
-    annotationProcessor("com.github.bumptech.glide:compiler:4.16.0") // necessário para gerar código
+    annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
 
-    // Dependência principal do ARCore
-    implementation ("com.google.ar:core:1.43.0")
+    // ARCore
+    implementation("com.google.ar:core:1.43.0")
 
-    implementation ("com.google.ar.sceneform:sceneform-base:1.17.1")
-    implementation ("com.google.ar.sceneform:core:1.17.1")
+    // Sceneform
+    implementation("com.gorisse.thomas.sceneform:sceneform:1.21.0")
+    implementation("com.gorisse.thomas.sceneform:ux:1.21.0")
+
+    // CameraX (uma vez só)
+    implementation("androidx.camera:camera-core:1.3.0")
+    implementation("androidx.camera:camera-camera2:1.3.0")
+    implementation("androidx.camera:camera-view:1.3.0")
+    implementation("androidx.camera:camera-lifecycle:1.3.0")
 }
