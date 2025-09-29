@@ -3,11 +3,7 @@ package com.example.pokmon
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
-import android.widget.ImageView
-import android.widget.ProgressBar
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import com.bumptech.glide.Glide
@@ -29,47 +25,18 @@ class Detalhe : AppCompatActivity() {
     private lateinit var txtTipoPokemon: TextView
     private lateinit var btnAbrirRA: MaterialButton
 
-    private lateinit var progressVida: ProgressBar
-    private lateinit var progressAtaque: ProgressBar
-    private lateinit var progressDefesa: ProgressBar
-    private lateinit var progressAtqEsp: ProgressBar
-    private lateinit var progressDefEsp: ProgressBar
-    private lateinit var progressVelocidade: ProgressBar
-
-    private lateinit var numVida: TextView
-    private lateinit var numAtaque: TextView
-    private lateinit var numDefesa: TextView
-    private lateinit var numAtqEsp: TextView
-    private lateinit var numDefEsp: TextView
-    private lateinit var numVelocidade: TextView
-
-    private var pokemonId: Int = -1 // Default caso não venha do Intent
+    private var pokemonId: Int = 1 // valor default
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.card_detalhe)
 
-        // Inicializa views
         cardContainer = findViewById(R.id.cardContainer)
         imgPokemon = findViewById(R.id.imgPokemon)
         txtNomePokemon = findViewById(R.id.txtNomePokemon)
         txtNumeroPokemon = findViewById(R.id.txtNumeroPokemon)
         txtTipoPokemon = findViewById(R.id.txtTipoPokemon)
         btnAbrirRA = findViewById(R.id.btnAbrirRA)
-
-        progressVida = findViewById(R.id.progressVida)
-        progressAtaque = findViewById(R.id.progressAtaque)
-        progressDefesa = findViewById(R.id.progressDefesa)
-        progressAtqEsp = findViewById(R.id.progressAtqEsp)
-        progressDefEsp = findViewById(R.id.progressDefEsp)
-        progressVelocidade = findViewById(R.id.progressVelocidade)
-
-        numVida = findViewById(R.id.numVida)
-        numAtaque = findViewById(R.id.numAtaque)
-        numDefesa = findViewById(R.id.numDefesa)
-        numAtqEsp = findViewById(R.id.numAtqEsp)
-        numDefEsp = findViewById(R.id.numDefEsp)
-        numVelocidade = findViewById(R.id.numVelocidade)
 
         val pokemonName = intent.getStringExtra("pokemonName")
         if (pokemonName != null) {
@@ -80,18 +47,56 @@ class Detalhe : AppCompatActivity() {
         }
 
         btnAbrirRA.setOnClickListener {
-            if (pokemonId != -1) {
-                val intent = Intent(this, ARActivity::class.java)
-                intent.putExtra("pokemonName", pokemonName)
-                intent.putExtra("pokemonId", pokemonId)
-                startActivity(intent)
-            } else {
-                Toast.makeText(this, "Não é possível carregar a RA, ID do Pokémon faltando.", Toast.LENGTH_SHORT).show()
-            }
+            val intent = Intent(this, ARActivity::class.java)
+            intent.putExtra("pokemonId", pokemonId) // passa o ID para a AR
+            startActivity(intent)
         }
     }
 
-    // Função fora do onCreate
+    private fun carregarDetalhes(name: String) {
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://pokeapi.co/api/v2/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        val api = retrofit.create(DetalheApi::class.java)
+        api.getPokemonDetail(name).enqueue(object : Callback<Pokemon> {
+            override fun onResponse(call: Call<Pokemon>, response: Response<Pokemon>) {
+                if (response.isSuccessful) {
+                    val pokemon = response.body()
+                    if (pokemon != null) {
+                        pokemonId = pokemon.id
+                        preencherDados(pokemon)
+                    }
+                } else {
+                    Toast.makeText(this@Detalhe, "Erro ao carregar detalhes", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<Pokemon>, t: Throwable) {
+                Toast.makeText(this@Detalhe, "Falha: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    private fun preencherDados(pokemon: Pokemon) {
+        val typeName = pokemon.types.firstOrNull()?.type?.name ?: "normal"
+        val cardColor = getTypeColor(typeName)
+        cardContainer.setCardBackgroundColor(cardColor)
+
+        txtNomePokemon.text = pokemon.name.replaceFirstChar { it.uppercase() }
+        txtNumeroPokemon.text = String.format("#%03d", pokemon.id)
+        txtTipoPokemon.text = typeName.replaceFirstChar { it.uppercase() }
+
+        val gifUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${pokemon.id}.gif"
+
+        Glide.with(this)
+            .asGif()
+            .load(gifUrl)
+            .error(pokemon.sprites.front_default)
+            .into(imgPokemon)
+    }
+
     private fun getTypeColor(type: String): Int {
         return when (type.lowercase()) {
             "fire" -> Color.parseColor("#EE8130")
@@ -114,77 +119,5 @@ class Detalhe : AppCompatActivity() {
             "steel" -> Color.parseColor("#B7B7CE")
             else -> Color.parseColor("#808080")
         }
-    }
-
-    private fun carregarDetalhes(name: String) {
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://pokeapi.co/api/v2/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-        val api = retrofit.create(DetalheApi::class.java)
-        api.getPokemonDetail(name).enqueue(object : Callback<Pokemon> {
-            override fun onResponse(call: Call<Pokemon>, response: Response<Pokemon>) {
-                if (response.isSuccessful) {
-                    val pokemon = response.body()
-                    if (pokemon != null) {
-                        pokemonId = pokemon.id // Salva ID para RA
-                        preencherDados(pokemon)
-                    }
-                } else {
-                    Toast.makeText(this@Detalhe, "Erro ao carregar detalhes", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            override fun onFailure(call: Call<Pokemon>, t: Throwable) {
-                Toast.makeText(this@Detalhe, "Falha: ${t.message}", Toast.LENGTH_SHORT).show()
-                Log.e("DetalheActivity", "Falha na chamada da API: ${t.message}", t)
-            }
-        })
-    }
-
-    private fun preencherDados(pokemon: Pokemon) {
-        val typeName = pokemon.types.firstOrNull()?.type?.name ?: "normal"
-        val cardColor = getTypeColor(typeName)
-
-        cardContainer.setCardBackgroundColor(cardColor)
-
-        val red = Color.red(cardColor)
-        val green = Color.green(cardColor)
-        val blue = Color.blue(cardColor)
-        val luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255
-        val textColor = if (luminance > 0.5) Color.BLACK else Color.WHITE
-
-        txtNomePokemon.text = pokemon.name.replaceFirstChar { it.uppercase() }
-        txtNomePokemon.setTextColor(textColor)
-
-        txtNumeroPokemon.text = String.format("#%03d", pokemon.id)
-        txtNumeroPokemon.setTextColor(textColor)
-
-        txtTipoPokemon.text = typeName.replaceFirstChar { it.uppercase() }
-        txtTipoPokemon.setTextColor(textColor)
-
-        val gifUrl =
-            "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${pokemon.id}.gif"
-
-        Glide.with(this)
-            .asGif()
-            .load(gifUrl)
-            .error(pokemon.sprites.front_default)
-            .into(imgPokemon)
-
-        progressVida.progress = pokemon.stats.getOrNull(0)?.base_stat ?: 0
-        progressAtaque.progress = pokemon.stats.getOrNull(1)?.base_stat ?: 0
-        progressDefesa.progress = pokemon.stats.getOrNull(2)?.base_stat ?: 0
-        progressAtqEsp.progress = pokemon.stats.getOrNull(3)?.base_stat ?: 0
-        progressDefEsp.progress = pokemon.stats.getOrNull(4)?.base_stat ?: 0
-        progressVelocidade.progress = pokemon.stats.getOrNull(5)?.base_stat ?: 0
-
-        numVida.text = pokemon.stats.getOrNull(0)?.base_stat?.toString() ?: "0"
-        numAtaque.text = pokemon.stats.getOrNull(1)?.base_stat?.toString() ?: "0"
-        numDefesa.text = pokemon.stats.getOrNull(2)?.base_stat?.toString() ?: "0"
-        numAtqEsp.text = pokemon.stats.getOrNull(3)?.base_stat?.toString() ?: "0"
-        numDefEsp.text = pokemon.stats.getOrNull(4)?.base_stat?.toString() ?: "0"
-        numVelocidade.text = pokemon.stats.getOrNull(5)?.base_stat?.toString() ?: "0"
     }
 }
